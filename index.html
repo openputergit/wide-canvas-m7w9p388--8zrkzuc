@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced SEO Permalink Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .copied-toast {
+            animation: fadeOut 2s forwards;
+            animation-delay: 1s;
+        }
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+        .result-item {
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from { transform: translateY(-10px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-3xl">
+        <div class="bg-white rounded-xl shadow-lg p-6 sm:p-8">
+            <h1 class="text-2xl font-bold text-gray-800 mb-6">Enhanced SEO Permalink Generator</h1>
+            
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Base URL <span class="text-red-500">*</span></label>
+                <div class="flex gap-2">
+                    <input type="text" id="baseUrl" placeholder="https://example.com" 
+                        class="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors">
+                </div>
+                <p class="text-sm text-gray-500 mt-1">The base URL will automatically end with a forward slash (/)</p>
+            </div>
+
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Practice Area Keywords (one per line)</label>
+                <div class="flex gap-2">
+                    <textarea id="practiceKeywords" rows="4" placeholder="personal injury law services&#10;family law consultation&#10;criminal defense attorney" 
+                        class="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"></textarea>
+                    <button onclick="clearPracticeKeywords()" class="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Blog Keywords (one per line)</label>
+                <div class="flex gap-2">
+                    <textarea id="blogKeywords" rows="4" placeholder="car accident compensation guide&#10;workplace injury tips&#10;divorce process explained" 
+                        class="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"></textarea>
+                    <button onclick="clearBlogKeywords()" class="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-4 mb-8">
+                <button onclick="generatePermalinks()" class="flex-1 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                    Generate Permalinks
+                </button>
+                <button onclick="resetAll()" class="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium">
+                    Reset All
+                </button>
+            </div>
+
+            <div id="results" class="hidden">
+                <h2 class="text-lg font-semibold text-gray-800 mb-4">Generated Permalinks</h2>
+                
+                <div id="practiceAreaResults" class="mb-6">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-md font-medium text-gray-700">Practice Area URLs</h3>
+                        <button onclick="copyPracticeUrls()" class="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1">
+                            <i class="bi bi-clipboard"></i> Copy All Practice URLs
+                        </button>
+                    </div>
+                    <div id="practiceAreaUrlsList" class="space-y-3"></div>
+                </div>
+
+                <div id="blogResults" class="mb-6">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="text-md font-medium text-gray-700">Blog URLs</h3>
+                        <button onclick="copyBlogUrls()" class="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1">
+                            <i class="bi bi-clipboard"></i> Copy All Blog URLs
+                        </button>
+                    </div>
+                    <div id="blogUrlsList" class="space-y-3"></div>
+                </div>
+
+                <button onclick="copyAllUrls()" class="w-full mt-4 px-6 py-3 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors font-medium">
+                    Copy All URLs
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="fixed bottom-4 right-4 bg-gray-800 text-white px-6 py-3 rounded-lg shadow-lg hidden">
+        Copied to clipboard!
+    </div>
+
+    <script>
+        function cleanUrl(url) {
+            if (!url) return '';
+            return url.trim().replace(/\/$/, '') + '/';
+        }
+
+        function cleanKeyword(keyword) {
+            return keyword
+                .toLowerCase()
+                .replace(/[^a-z0-9\s-]/g, '')
+                .replace(/\b(202[4-9]|20[3-5][0-9])\b/g, '')
+                .replace(/\s+/g, '-')
+                .replace(/-+/g, '-')
+                .replace(/^-|-$/g, '')
+                .trim();
+        }
+
+        function createUrlElement(url, index) {
+            const div = document.createElement('div');
+            div.className = 'result-item p-4 bg-gray-50 rounded-lg border border-gray-200';
+            div.innerHTML = `
+                <div class="flex justify-between items-center mb-2">
+                    <label class="text-sm font-medium text-gray-700">URL ${index + 1}</label>
+                    <button onclick="copyToClipboard('${url}')" class="text-blue-600 hover:text-blue-800 flex items-center gap-1">
+                        <i class="bi bi-clipboard"></i> Copy
+                    </button>
+                </div>
+                <p class="text-sm text-gray-600 break-all">${url}</p>
+            `;
+            return div;
+        }
+
+        function generatePermalinks() {
+            const baseUrl = cleanUrl(document.getElementById('baseUrl').value);
+            const practiceKeywords = document.getElementById('practiceKeywords').value.split('\n').filter(k => k.trim());
+            const blogKeywords = document.getElementById('blogKeywords').value.split('\n').filter(k => k.trim());
+
+            if (!baseUrl) {
+                alert('Please enter a base URL.');
+                return;
+            }
+
+            if (!practiceKeywords.length && !blogKeywords.length) {
+                alert('Please enter at least one keyword.');
+                return;
+            }
+
+            const practiceAreaUrlsList = document.getElementById('practiceAreaUrlsList');
+            const blogUrlsList = document.getElementById('blogUrlsList');
+            practiceAreaUrlsList.innerHTML = '';
+            blogUrlsList.innerHTML = '';
+
+            practiceKeywords.forEach((keyword, index) => {
+                const cleanedKeyword = cleanKeyword(keyword);
+                if (cleanedKeyword) {
+                    const url = `${baseUrl}${cleanedKeyword}/`;
+                    practiceAreaUrlsList.appendChild(createUrlElement(url, index));
+                }
+            });
+
+            blogKeywords.forEach((keyword, index) => {
+                const cleanedKeyword = cleanKeyword(keyword);
+                if (cleanedKeyword) {
+                    const url = `${baseUrl}blog/${cleanedKeyword}/`;
+                    blogUrlsList.appendChild(createUrlElement(url, index));
+                }
+            });
+
+            document.getElementById('results').classList.remove('hidden');
+        }
+
+        function showToast() {
+            const toast = document.getElementById('toast');
+            toast.classList.remove('hidden');
+            toast.classList.add('copied-toast');
+            setTimeout(() => {
+                toast.classList.add('hidden');
+                toast.classList.remove('copied-toast');
+            }, 3000);
+        }
+
+        async function copyToClipboard(text) {
+            try {
+                await navigator.clipboard.writeText(text);
+                showToast();
+            } catch (err) {
+                alert('Failed to copy text: ' + err);
+            }
+        }
+
+        async function copyPracticeUrls() {
+            const practiceUrls = Array.from(document.getElementById('practiceAreaUrlsList').querySelectorAll('p')).map(p => p.textContent);
+            try {
+                await navigator.clipboard.writeText(practiceUrls.join('\n'));
+                showToast();
+            } catch (err) {
+                alert('Failed to copy text: ' + err);
+            }
+        }
+
+        async function copyBlogUrls() {
+            const blogUrls = Array.from(document.getElementById('blogUrlsList').querySelectorAll('p')).map(p => p.textContent);
+            try {
+                await navigator.clipboard.writeText(blogUrls.join('\n'));
+                showToast();
+            } catch (err) {
+                alert('Failed to copy text: ' + err);
+            }
+        }
+
+        async function copyAllUrls() {
+            const practiceUrls = Array.from(document.getElementById('practiceAreaUrlsList').querySelectorAll('p')).map(p => p.textContent);
+            const blogUrls = Array.from(document.getElementById('blogUrlsList').querySelectorAll('p')).map(p => p.textContent);
+            const allUrls = [...practiceUrls, ...blogUrls].join('\n');
+            
+            try {
+                await navigator.clipboard.writeText(allUrls);
+                showToast();
+            } catch (err) {
+                alert('Failed to copy text: ' + err);
+            }
+        }
+
+        function clearPracticeKeywords() {
+            document.getElementById('practiceKeywords').value = '';
+        }
+
+        function clearBlogKeywords() {
+            document.getElementById('blogKeywords').value = '';
+        }
+
+        function resetAll() {
+            document.getElementById('baseUrl').value = '';
+            document.getElementById('practiceKeywords').value = '';
+            document.getElementById('blogKeywords').value = '';
+            document.getElementById('results').classList.add('hidden');
+        }
+    </script>
+<script>document.body.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); return }, { passive: false })</script>
+	</body>
+</html>
